@@ -3,7 +3,7 @@
 
 **Muse.AI** is an intelligent music generation platform that translates natural language descriptions into original symbolic music compositions. By bridging Large Language Models (Gemini) with deep learning sequence models (LSTM), it allows users to generate, visualize, and refine music through a conversational interface.
 
-![Muse AI Interface](https://via.placeholder.com/800x400?text=Muse+AI+Dashboard+Preview)
+![Muse AI Interface](assets/muse_ai_dashboard.png)
 
 ## 🚀 Key Features
 
@@ -34,7 +34,7 @@
 
 ### 1. Backend Setup
 ```bash
-cd muse_ai/backend
+cd backend
 
 # Create virtual environment
 python -m venv venv
@@ -54,7 +54,7 @@ python main.py
 
 ### 2. Frontend Setup
 ```bash
-cd muse_ai/frontend
+cd frontend
 
 # Install dependencies
 npm install
