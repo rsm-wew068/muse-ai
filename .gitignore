@@ -1,0 +1,6 @@
+.env
+*.mid
+__pycache__/
+.DS_Store
+node_modules/
+muse_ai/frontend/.next/
