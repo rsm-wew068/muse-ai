@@ -3,8 +3,6 @@
 
 **Muse.AI** is an intelligent music generation platform that translates natural language descriptions into original symbolic music compositions. By bridging Large Language Models (Gemini) with deep learning sequence models (LSTM), it allows users to generate, visualize, and refine music through a conversational interface.
 
-![Muse AI Interface](assets/muse_ai_dashboard.png)
-
 ## 🚀 Key Features
 
 *   **Natural Language Conductor**: Describe your vibe (e.g., *"Cyberpunk chase in the rain"*) and let our **Gemini-powered Agent** translate abstract concepts into technical musical parameters (Key, Tempo, Mood).
