@@ -73,9 +73,9 @@ export default function Home() {
           <div className="mt-4 flex justify-between items-center">
             <div className="flex gap-4">
               {/* Badges for Partners */}
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-900/50 text-blue-300 border border-blue-800">Gemini Powered</span>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-900/50 text-green-300 border border-green-800">Vertex AI</span>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-900/50 text-purple-300 border border-purple-800">Datadog</span>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-900/50 text-blue-300 border border-blue-800">
+                ✨ Powered by Gemini 3
+              </span>
             </div>
 
             <button
@@ -99,10 +99,15 @@ export default function Home() {
                 <div>
                   <h3 className="text-2xl font-bold text-white">Composition Ready</h3>
                   <p className="text-slate-400">Generated in key {result.metadata.key} • {result.metadata.tempo} BPM</p>
+                  {result.metadata.reasoning && (
+                    <div className="mt-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700 max-w-xl">
+                      <p className="text-sm text-cyan-200 italic">" {result.metadata.reasoning} "</p>
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-slate-500">Inference Time: 0.8s</p>
-                  <p className="text-xs text-slate-500">Model: Transformer-XS</p>
+                  <p className="text-xs text-slate-500">Model: Gemini 3.0 Pro</p>
                 </div>
               </div>
 

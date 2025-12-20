@@ -16,7 +16,7 @@ class MusicAgent:
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
         if HAS_GENAI and self.api_key:
             genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-pro-latest')
+            self.model = genai.GenerativeModel('gemini-3-pro-preview')
         else:
             self.model = None
 
@@ -74,16 +74,19 @@ class MusicAgent:
             return self._get_deterministic_mock(user_prompt, feedback_history)
             
         system_prompt = f"""
-        You are a Music Producer. Convert the user's description into technical parameters.
+        You are a generic world-class Music Producer using the new Gemini 3 reasoning engine. 
+        Deeply analyze the user's request and convert it into technical musical parameters.
+        Explain your creative decisions in the 'reasoning' field.
+        
         Return strictly valid JSON.
         
         Context: The user has provided feedback on previous attempts: {feedback_history}.
-        If the user voted 'down', you MUST change the interpretation significantly (e.g. swap major/minor, change tempo).
         
         Fields:
         - tempo (int)
         - key (str, e.g. "C_Minor")
         - mood (str)
+        - reasoning (str): A concise explanation of why you chose these parameters based on the prompt.
         - seed_tokens (list of str, e.g. ["Track_Melody", "Note_C4"]): detailed tokens for the start of the song.
         """
         
