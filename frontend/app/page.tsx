@@ -8,36 +8,75 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
 
+  // Refinement State
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [refineText, setRefineText] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedImage(file);
       setPreviewUrl(URL.createObjectURL(file));
       setResult(null);
+      setSessionId(null);
+      setRefineText("");
     }
   };
 
   const handleAnalyze = async () => {
     if (!selectedImage) return;
-    
+
     setLoading(true);
     setResult(null);
-    
+    setSessionId(null);
+
     try {
       const formData = new FormData();
       formData.append('file', selectedImage);
-      
-      const response = await fetch('http://localhost:8000/analyze-photo', {
+
+      // Use env var or default to localhost
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/analyze-photo`, {
         method: 'POST',
         body: formData,
       });
-      
+
       const data = await response.json();
       setResult(data);
+      setSessionId(data.session_id);
     } catch (error) {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefine = async () => {
+    if (!sessionId || !refineText) return;
+
+    setIsRefining(true);
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/refine`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          feedback: refineText
+        }),
+      });
+
+      const data = await response.json();
+      setResult(data); // Update results with new refined data
+      setRefineText(""); // Clear input
+    } catch (error) {
+      console.error('Refine Error:', error);
+    } finally {
+      setIsRefining(false);
     }
   };
 
@@ -60,9 +99,9 @@ export default function Home() {
           <div className="flex flex-col items-center gap-4">
             {previewUrl ? (
               <div className="relative w-full max-w-md">
-                <img 
-                  src={previewUrl} 
-                  alt="Preview" 
+                <img
+                  src={previewUrl}
+                  alt="Preview"
                   className="w-full h-64 object-cover rounded-lg"
                 />
                 <button
@@ -85,9 +124,9 @@ export default function Home() {
                   <span className="text-slate-400">Click to upload photo</span>
                   <span className="text-xs text-slate-600">JPG, PNG, or GIF</span>
                 </div>
-                <input 
-                  type="file" 
-                  accept="image/*" 
+                <input
+                  type="file"
+                  accept="image/*"
                   onChange={handleImageSelect}
                   className="hidden"
                 />
@@ -102,11 +141,10 @@ export default function Home() {
               <button
                 onClick={handleAnalyze}
                 disabled={loading || !selectedImage}
-                className={`px-8 py-3 rounded-xl font-bold text-lg transition-all ${
-                  loading || !selectedImage
-                    ? 'bg-slate-700 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:scale-105 shadow-lg shadow-cyan-500/20'
-                }`}
+                className={`px-8 py-3 rounded-xl font-bold text-lg transition-all ${loading || !selectedImage
+                  ? 'bg-slate-700 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:scale-105 shadow-lg shadow-cyan-500/20'
+                  }`}
               >
                 {loading ? 'Analyzing...' : 'Find My Soundtrack'}
               </button>
@@ -114,68 +152,102 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Results Section */}
         {result && (
-          <div className="w-full animate-fade-in-up">
+          <div className="w-full animate-fade-in-up pb-20">
             {/* Vibe Analysis */}
             <div className="bg-slate-900/80 rounded-2xl p-6 border border-slate-700 mb-6">
               <h3 className="text-2xl font-bold text-white mb-3">Vibe Analysis</h3>
-              <p className="text-slate-300 mb-4">{result.vibe_analysis.scene_description}</p>
-              <div className="flex gap-2 flex-wrap">
-                <span className="px-3 py-1 bg-purple-900/50 text-purple-300 rounded-full text-sm">
-                  {result.vibe_analysis.mood}
-                </span>
-                <span className="px-3 py-1 bg-cyan-900/50 text-cyan-300 rounded-full text-sm">
-                  {result.vibe_analysis.genre}
-                </span>
-                <span className="px-3 py-1 bg-pink-900/50 text-pink-300 rounded-full text-sm">
-                  {result.vibe_analysis.tempo} tempo
-                </span>
-                {result.vibe_analysis.keywords.map((kw: string, i: number) => (
-                  <span key={i} className="px-3 py-1 bg-slate-800 text-slate-400 rounded-full text-sm">
-                    {kw}
-                  </span>
-                ))}
+              <p className="text-slate-300 text-lg italic mb-6">"{result.vibe_analysis}"</p>
+
+              {/* Tech Stats (Search Params) */}
+              {result.search_parameters && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  {Object.entries(result.search_parameters).map(([key, value]) => {
+                    if (key.startsWith("target_") && typeof value === 'number') {
+                      return (
+                        <div key={key} className="bg-slate-800 p-3 rounded-lg border border-slate-700">
+                          <p className="text-xs text-slate-500 uppercase font-bold">{key.replace("target_", "")}</p>
+                          <div className="flex items-end gap-2">
+                            <span className="text-xl font-mono text-cyan-400">{value}</span>
+                            <div className="w-full bg-slate-700 h-2 rounded-full mb-1">
+                              <div className="bg-cyan-500 h-2 rounded-full" style={{ width: `${value * 100}%` }}></div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    }
+                    return null;
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Refine / Feedback Section */}
+            <div className="bg-gradient-to-r from-purple-900/40 to-cyan-900/40 border border-slate-700 p-4 rounded-xl mb-8 flex gap-4 items-center">
+              <div className="flex-1">
+                <p className="text-sm font-bold text-cyan-300 mb-1">🤖 Agent Feedback Loop</p>
+                <input
+                  type="text"
+                  placeholder="e.g. 'Too sad, make it more energetic' or 'I want 80s vibes'"
+                  className="w-full bg-slate-900/50 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                  value={refineText}
+                  onChange={(e) => setRefineText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleRefine()}
+                />
               </div>
+              <button
+                onClick={handleRefine}
+                disabled={isRefining || !refineText}
+                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-6 py-2 rounded-lg h-10 mt-6 disabled:opacity-50"
+              >
+                {isRefining ? 'Refining...' : 'Refine'}
+              </button>
             </div>
 
             {/* Track Recommendations */}
             <div className="space-y-4">
-              <h3 className="text-2xl font-bold text-white">Perfect Matches</h3>
+              <h3 className="text-2xl font-bold text-white">Curated Selection</h3>
               {result.recommendations.map((rec: any, idx: number) => (
-                <div key={idx} className="bg-slate-900/80 rounded-xl p-5 border border-slate-700 hover:border-cyan-500/50 transition-all">
-                  <div className="flex gap-4">
+                <div key={idx} className="bg-slate-900/80 rounded-xl p-5 border border-slate-700 hover:border-cyan-500/50 transition-all group">
+                  <div className="flex gap-4 items-start">
+                    {/* Index + Score */}
+                    <div className="flex flex-col items-center gap-1 min-w-[3rem]">
+                      <span className="text-2xl font-black text-slate-700 group-hover:text-cyan-600/50">#{idx + 1}</span>
+                      {rec.match_score && (
+                        <span className="text-xs font-mono bg-green-900/50 text-green-400 px-2 py-0.5 rounded border border-green-800">
+                          {rec.match_score}%
+                        </span>
+                      )}
+                    </div>
+
                     {rec.track.image && (
-                      <img 
-                        src={rec.track.image} 
+                      <img
+                        src={rec.track.image}
                         alt={rec.track.name}
-                        className="w-20 h-20 rounded-lg object-cover"
+                        className="w-20 h-20 rounded-lg object-cover shadow-lg"
                       />
                     )}
                     <div className="flex-1">
                       <h4 className="text-lg font-bold text-white">{rec.track.name}</h4>
-                      <p className="text-slate-400 text-sm mb-2">{rec.track.artist} • {rec.track.album}</p>
-                      <p className="text-cyan-200 text-sm italic mb-3">"{rec.explanation}"</p>
+                      <p className="text-slate-400 text-sm mb-2">{rec.track.artist}</p>
+
+                      <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 mb-3">
+                        <p className="text-cyan-200 text-sm italic">
+                          <span className="text-cyan-500 font-bold not-italic">AI Reason: </span>
+                          "{rec.explanation}"
+                        </p>
+                      </div>
+
                       <div className="flex gap-3">
-                        <a 
+                        <a
                           href={rec.track.spotify_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-bold transition-colors"
+                          className="px-4 py-2 bg-[#1DB954] hover:bg-[#1ed760] text-black rounded-full text-sm font-bold transition-colors flex items-center gap-2"
                         >
-                          Open in Spotify
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.38 9.841-.72 13.561 1.56.42.24.6.72.18 1.26zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" /></svg>
+                          Play on Spotify
                         </a>
-                        {rec.track.preview_url && (
-                          <button
-                            onClick={() => {
-                              const audio = new Audio(rec.track.preview_url);
-                              audio.play();
-                            }}
-                            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors"
-                          >
-                            ▶ Preview
-                          </button>
-                        )}
                       </div>
                     </div>
                   </div>

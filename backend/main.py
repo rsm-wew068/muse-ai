@@ -1,65 +1,101 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Body
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 import os
+import io
+import uuid
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-from vision_agent import VisionAgent
-from spotify_client import SpotifyClient
-from explainer import TrackExplainer
+from graph import muse_graph
 
 app = FastAPI(title="Muse.AI Backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"], # Allow all for hackathon demo
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# In-memory session store (Simple for Hackathon)
+# session_id -> { "image_data": bytes, "history": [] }
+SESSIONS: Dict[str, Dict] = {}
+
+class RefineRequest(BaseModel):
+    session_id: str
+    feedback: str
+
 @app.get("/")
 def health_check():
-    return {"status": "ok", "service": "Muse.AI - Photo to Music"}
-
-vision_agent = VisionAgent()
-spotify_client = SpotifyClient()
-explainer = TrackExplainer()
+    return {"status": "ok", "service": "Muse.AI - Agentic Music Curator"}
 
 @app.post("/analyze-photo")
 async def analyze_photo(file: UploadFile = File(...)):
     """
-    1. Receive photo upload
-    2. Gemini 3 Pro analyzes vibe
-    3. Search Spotify for matching tracks
-    4. Gemini 3 Flash explains each match
+    Starts the refinement loop.
     """
     print(f"Received photo: {file.filename}")
     
     # Read image bytes
     image_data = await file.read()
     
-    # Step 1: Analyze photo with Gemini Pro Vision
-    vibe_analysis = vision_agent.analyze_image(image_data)
-    print(f"Vibe Analysis: {vibe_analysis}")
+    # Create Session
+    session_id = str(uuid.uuid4())
+    SESSIONS[session_id] = {
+        "image_data": image_data,
+        "iteration": 0
+    }
     
-    # Step 2: Search Spotify based on vibe
-    tracks = spotify_client.search_tracks(vibe_analysis)
-    print(f"Found {len(tracks)} tracks")
+    # Run Graph
+    initial_state = {
+        "image_data": image_data,
+        "user_feedback": None,
+        "iteration_count": 0
+    }
     
-    # Step 3: Explain each track with Gemini Flash
-    recommendations = []
-    for track in tracks[:5]:  # Top 5 tracks
-        explanation = explainer.explain_match(vibe_analysis, track)
-        recommendations.append({
-            "track": track,
-            "explanation": explanation
-        })
+    result = muse_graph.invoke(initial_state)
     
     return {
         "status": "success",
-        "vibe_analysis": vibe_analysis,
-        "recommendations": recommendations
+        "session_id": session_id,
+        "vibe_analysis": result.get("vibe_description"),
+        "search_parameters": result.get("search_parameters"),
+        "recommendations": result.get("final_recommendations", [])
+    }
+
+@app.post("/refine")
+async def refine_playlist(request: RefineRequest):
+    """
+    Feedback loop: Re-runs the agent with user critique.
+    """
+    session_id = request.session_id
+    if session_id not in SESSIONS:
+        raise HTTPException(status_code=404, detail="Session expired or not found")
+        
+    session = SESSIONS[session_id]
+    image_data = session["image_data"]
+    
+    print(f"Refining session {session_id} with feedback: {request.feedback}")
+    
+    # Run Graph with Feedback
+    state = {
+        "image_data": image_data,
+        "user_feedback": request.feedback,
+        "iteration_count": session["iteration"]
+    }
+    
+    result = muse_graph.invoke(state)
+    
+    # Update session
+    session["iteration"] += 1
+    
+    return {
+        "status": "success",
+        "session_id": session_id,
+        "vibe_analysis": result.get("vibe_description"), # Narrative might change
+        "search_parameters": result.get("search_parameters"),
+        "recommendations": result.get("final_recommendations", [])
     }
 
 if __name__ == "__main__":

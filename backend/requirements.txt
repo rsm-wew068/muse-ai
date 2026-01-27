@@ -6,3 +6,6 @@ python-multipart
 pillow
 requests
 python-dotenv
+langgraph
+langchain-google-genai
+langchain-core

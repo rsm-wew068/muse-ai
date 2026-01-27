@@ -49,9 +49,54 @@ class SpotifyClient:
             print("Token expired, refreshing...")
             self._authenticate()
     
+    def get_recommendations(self, seed_genres: list, target_params: dict, limit: int = 10):
+        """
+        Get recommendations based on audio features (valence, energy, etc.)
+        """
+        if not self.access_token:
+            return self._mock_tracks()
+            
+        self._ensure_valid_token()
+        
+        url = "https://api.spotify.com/v1/recommendations"
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+        
+        # Valid seeds are required. For now, we trust Gemini or should filter against available seeds.
+        # Ideally, we should fetch available seeds and filter.
+        
+        params = {
+            "limit": limit,
+            "seed_genres": ",".join(seed_genres[:5]), # Max 5 seeds
+            **target_params
+        }
+        
+        try:
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            tracks = response.json()["tracks"]
+            
+            return [{
+                "id": t["id"],
+                "name": t["name"],
+                "artist": t["artists"][0]["name"],
+                "album": t["album"]["name"],
+                "preview_url": t.get("preview_url"),
+                "spotify_url": t["external_urls"]["spotify"],
+                "image": t["album"]["images"][0]["url"] if t["album"]["images"] else None,
+                "duration_ms": t["duration_ms"]
+            } for t in tracks]
+            
+        except requests.exceptions.HTTPError as e:
+            print(f"Spotify recommendation error: {e}")
+            # Fallback to search if recommendations fail (e.g., invalid seeds)
+            return self.search_tracks({"keywords": seed_genres}, limit)
+        except Exception as e:
+            print(f"Spotify recommendation error: {e}")
+            return self._mock_tracks()
+
     def search_tracks(self, vibe_analysis: dict, limit: int = 5):
         """
-        Search Spotify based on vibe analysis.
+        Search Spotify based on vibe analysis (Fallback method).
         Returns list of track objects.
         """
         if not self.access_token:
@@ -61,11 +106,17 @@ class SpotifyClient:
         self._ensure_valid_token()
         
         # Build search query from vibe
-        mood = vibe_analysis.get("mood", "")
-        genre = vibe_analysis.get("genre", "")
-        keywords = " ".join(vibe_analysis.get("keywords", [])[:3])  # Limit keywords
+        # handle legacy or new vibe_analysis structure
+        if "musical_parameters" in vibe_analysis:
+            # New structure fallback
+            keywords = vibe_analysis.get("search_query_suggestion", "")
+        else:
+            mood = vibe_analysis.get("mood", "")
+            genre = vibe_analysis.get("genre", "")
+            keywords = " ".join(vibe_analysis.get("keywords", [])[:3])
+            keywords = f"{mood} {genre} {keywords}"
         
-        query = f"{mood} {genre} {keywords}".strip()
+        query = keywords.strip()
         
         search_url = "https://api.spotify.com/v1/search"
         headers = {"Authorization": f"Bearer {self.access_token}"}
@@ -82,6 +133,7 @@ class SpotifyClient:
             
             # Simplify track data
             return [{
+                "id": t["id"],
                 "name": t["name"],
                 "artist": t["artists"][0]["name"],
                 "album": t["album"]["name"],
@@ -91,37 +143,13 @@ class SpotifyClient:
                 "duration_ms": t["duration_ms"]
             } for t in tracks]
             
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                # Token invalid, try refreshing once
-                print("401 error, refreshing token and retrying...")
-                self._authenticate()
-                headers = {"Authorization": f"Bearer {self.access_token}"}
-                try:
-                    response = requests.get(search_url, headers=headers, params=params)
-                    response.raise_for_status()
-                    tracks = response.json()["tracks"]["items"]
-                    return [{
-                        "name": t["name"],
-                        "artist": t["artists"][0]["name"],
-                        "album": t["album"]["name"],
-                        "preview_url": t.get("preview_url"),
-                        "spotify_url": t["external_urls"]["spotify"],
-                        "image": t["album"]["images"][0]["url"] if t["album"]["images"] else None,
-                        "duration_ms": t["duration_ms"]
-                    } for t in tracks]
-                except Exception as retry_error:
-                    print(f"Retry failed: {retry_error}")
-                    return self._mock_tracks()
-            else:
-                print(f"Spotify search error: {e}")
-                return self._mock_tracks()
         except Exception as e:
             print(f"Spotify search error: {e}")
             return self._mock_tracks()
     
     def _mock_tracks(self):
         return [{
+            "id": "mock_id",
             "name": "Mock Track",
             "artist": "Mock Artist",
             "album": "Mock Album",
