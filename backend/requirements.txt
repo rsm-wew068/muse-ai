@@ -1,6 +1,8 @@
 fastapi
 uvicorn
-torch
-music21
 google-generativeai
 pydantic
+python-multipart
+pillow
+requests
+python-dotenv
