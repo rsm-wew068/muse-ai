@@ -7,7 +7,7 @@
 
 Muse.AI isn't just a script; it's a stateful graph of specialized agents working together:
 
-1.  **👁️ The Visionary (Gemini 3 Vision)**:
+1.  **👁️ The Visionary (Gemini 3 Flash - Multimodal)**:
     *   Looks beyond objects. Analyzes lighting, texture, and implied narrative (e.g., "solitude at 3 AM").
     *   Extracts a poetic "Scene Narrative" and specific audio targets (Valence, Energy, Acousticness).
 2.  **🎼 The Musicologist (Algorithm)**:
@@ -28,8 +28,7 @@ Muse.AI isn't just a script; it's a stateful graph of specialized agents working
 ## 🛠️ Tech Stack
 
 ### AI & Agent Framework
-*   **Google Gemini 3 Vision**: Image analysis & Narrative generation.
-*   **Google Gemini 3 Flash**: High-speed reasoning & critique.
+*   **Google Gemini 3 Flash**: Used for both Multimodal Vision analysis and Text generation/reasoning.
 *   **LangGraph**: Stateful agent orchestration.
 *   **LangChain**: Model tooling.
 
