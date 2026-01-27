@@ -1,41 +1,56 @@
 # Muse.AI 🎵
-> *Photo to Music: AI-Powered Soundtrack Discovery*
+> *The Agentic DJ that sees, listens, and reasons.*
 
-**Muse.AI** analyzes the vibe of your photos and recommends the perfect Spotify tracks to match. Using Gemini 2.0's vision capabilities and Spotify's vast music library, it creates a personalized soundtrack for any moment captured in an image.
+**Muse.AI** is a multimodal AI agent that analyzes the narrative of your photos to curate a deeply personalized soundtrack. Unlike simple keyword swappers, Muse.AI uses a **LangGraph-based reasoning engine** to understand the *story* behind an image, translate it into psycho-acoustic parameters, and critique its own choices before presenting them to you.
 
-## 🚀 How It Works
+## 🧠 The "Muse" Agent Architecture
 
-1. **Upload a Photo**: Any image - a sunset, city street, cozy cafe, or adventure scene
-2. **AI Vision Analysis**: Gemini 2.0 Flash analyzes the mood, energy, and aesthetic
-3. **Spotify Search**: Finds tracks that match the vibe using intelligent keyword mapping
-4. **AI Explanations**: Gemini Flash explains why each track perfectly captures your photo's essence
+Muse.AI isn't just a script; it's a stateful graph of specialized agents working together:
+
+1.  **👁️ The Visionary (Gemini 3 Vision)**:
+    *   Looks beyond objects. Analyzes lighting, texture, and implied narrative (e.g., "solitude at 3 AM").
+    *   Extracts a poetic "Scene Narrative" and specific audio targets (Valence, Energy, Acousticness).
+2.  **🎼 The Musicologist (Algorithm)**:
+    *   Translates emotions into Spotify's technical `audio_features`.
+    *   Selects valid genre seeds based on the visual aesthetic.
+3.  **⚖️ The Critic (Gemini 3 Flash)**:
+    *   Reviews the candidate tracks found by Spotify.
+    *   *"Does this Death Metal song fit a Sleeping Baby photo?"* -> **Rejects bad matches.**
+4.  **🗣️ The Feedback Loop (Human-in-the-Loop)**:
+    *   Users can chat with the agent ("Make it more 80s") to refine the playlist in real-time.
+
+## 🚀 Key Features
+*   **Deep Multimodal Reasoning**: Connects visual pixel data to abstract musical theory.
+*   **Iterative Refinement**: The agent holds state, allowing for conversational adjustments.
+*   **Technical Precision**: Visualizes the exact 'Valence' and 'Energy' detected in your photo.
+*   **Production Ready**: Containerized and deployed on Google Cloud Run.
 
 ## 🛠️ Tech Stack
 
-### Frontend
-- **Framework**: Next.js 16 (React 19)
-- **Styling**: TailwindCSS v4 with Glassmorphism UI
-- **Image Upload**: Native file input with preview
+### AI & Agent Framework
+*   **Google Gemini 3 Vision**: Image analysis & Narrative generation.
+*   **Google Gemini 3 Flash**: High-speed reasoning & critique.
+*   **LangGraph**: Stateful agent orchestration.
+*   **LangChain**: Model tooling.
 
-### Backend
-- **API**: FastAPI
-- **Vision AI**: Google Gemini 3 Flash Preview (multimodal)
-- **Music API**: Spotify Web API
-- **Explainer AI**: Google Gemini 3 Flash Preview (text generation)
+### Application
+*   **Frontend**: Next.js 16 (React 19) + TailwindCSS v4 + Glassmorphism UI.
+*   **Backend**: FastAPI (Python) + Pydantic.
+*   **Infrastructure**: Docker + Google Cloud Run.
 
 ## ⚡️ Quick Start
 
 ### Prerequisites
-- Python 3.9+
-- Node.js 18+
-- Google Gemini API Key
-- Spotify API Credentials
+*   Python 3.11+
+*   Node.js 18+
+*   Google Gemini API Key
+*   Spotify API Credentials
 
 ### 1. Backend Setup
 ```bash
 cd backend
 
-# Install dependencies
+# Install dependencies including LangGraph
 pip install -r requirements.txt
 
 # Set up Environment Variables
@@ -44,7 +59,7 @@ GEMINI_API_KEY=your_gemini_key
 SPOTIFY_CLIENT_ID=your_spotify_client_id
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 
-# Run the API
+# Run the Agent API
 python main.py
 ```
 *Server runs on `http://localhost:8000`*
@@ -61,10 +76,23 @@ npm run dev
 ```
 *App runs on `http://localhost:3000`*
 
-## 🧠 System Architecture
+## ☁️ Deployment (Google Cloud Run)
 
-1. **Image Upload**: User uploads photo via browser
-2. **Vision Analysis**: Gemini 3 Flash Preview extracts mood, genre, tempo, keywords, and scene description
-3. **Spotify Search**: Query built from vibe analysis to find matching tracks
-4. **AI Explanation**: For each track, Gemini 3 Flash Preview explains the connection to the photo's vibe
-5. **Results Display**: Shows tracks with album art, preview links, and AI-generated explanations
+We have included a one-click deployment script for GCP.
+
+1.  Ensure you have the `gcloud` CLI installed and authenticated.
+2.  Run the script:
+    ```bash
+    ./deploy_gcp.sh
+    ```
+3.  This will:
+    *   Build Docker images for Frontend & Backend.
+    *   Push them to Google Artifact Registry.
+    *   Deploy them to Cloud Run as auto-scaling services.
+
+## 🧠 System Architecture Diagram
+
+`[User Image]` -> **Vision Agent** -> `(Narrative + Audio Params)` -> **Spotify Tool** -> `(Raw Candidates)` -> **Critic Agent** -> `(Curated Playlist)` -> **User UI**
+
+---
+*Built for the Gemini 3 Global Hackathon*
