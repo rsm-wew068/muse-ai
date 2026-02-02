@@ -48,6 +48,12 @@ def search_node(state: MuseState):
     # Clean None values
     targets = {k: v for k, v in targets.items() if v is not None}
     
+    print("\n" + "="*40)
+    print("🤖 GEMINI GENERATED PARAMETERS:")
+    print(f"Seeds: {seeds}")
+    print(f"Audio Features: {targets}")
+    print("="*40 + "\n")
+    
     if seeds:
         print(f"Searching with seeds: {seeds} and targets: {targets}")
         tracks = spotify.get_recommendations(seeds, targets, limit=15)
