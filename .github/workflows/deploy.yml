@@ -1,0 +1,81 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: muse-agent-app
+  REGION: us-central1
+  BACKEND_SERVICE: muse-backend
+  FRONTEND_SERVICE: muse-frontend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Verify Backend Files
+      - name: Verify Backend Directory
+        run: |
+          if [ -d "./backend" ]; then echo "Backend found"; else echo "Backend missing"; exit 1; fi
+          ls -la ./backend
+
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # ------------------------------------
+      # BACKEND DEPLOYMENT
+      # ------------------------------------
+      - name: Build and Push Backend
+        run: |
+          gcloud builds submit backend --tag gcr.io/$PROJECT_ID/$BACKEND_SERVICE
+
+      - name: Deploy Backend
+        run: |
+          gcloud run deploy $BACKEND_SERVICE \
+            --image gcr.io/$PROJECT_ID/$BACKEND_SERVICE \
+            --platform managed \
+            --region $REGION \
+            --allow-unauthenticated \
+            --set-env-vars GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }},SPOTIFY_CLIENT_SECRET=${{ secrets.SPOTIFY_CLIENT_SECRET }},LANGSMITH_TRACING=${{ secrets.LANGSMITH_TRACING }},LANGSMITH_ENDPOINT=${{ secrets.LANGSMITH_ENDPOINT }},LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }},LANGSMITH_PROJECT=${{ secrets.LANGSMITH_PROJECT }}
+
+      - name: Get Backend URL
+        run: |
+          echo "BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')" >> $GITHUB_ENV
+
+      # ------------------------------------
+      # FRONTEND DEPLOYMENT
+      # ------------------------------------
+      - name: Create Env File for Frontend
+        run: |
+          echo "NEXT_PUBLIC_API_URL=${{ env.BACKEND_URL }}" > frontend/.env.production
+
+      - name: Build and Push Frontend
+        run: |
+          gcloud builds submit frontend --tag gcr.io/$PROJECT_ID/$FRONTEND_SERVICE
+
+      - name: Deploy Frontend
+        run: |
+          gcloud run deploy $FRONTEND_SERVICE \
+            --image gcr.io/$PROJECT_ID/$FRONTEND_SERVICE \
+            --platform managed \
+            --region $REGION \
+            --allow-unauthenticated
+
+      - name: Show Final URL
+        run: |
+          echo "🎉 Frontend is live at: $(gcloud run services describe $FRONTEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')"
