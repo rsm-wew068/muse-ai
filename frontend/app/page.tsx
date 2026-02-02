@@ -36,7 +36,7 @@ export default function Home() {
       formData.append('file', selectedImage);
 
       // Use env var or default to localhost
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://muse-backend-2vu4yee5ha-uc.a.run.app';
       const response = await fetch(`${apiUrl}/analyze-photo`, {
         method: 'POST',
         body: formData,
@@ -58,7 +58,7 @@ export default function Home() {
     setIsRefining(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://muse-backend-2vu4yee5ha-uc.a.run.app';
       const response = await fetch(`${apiUrl}/refine`, {
         method: 'POST',
         headers: {
