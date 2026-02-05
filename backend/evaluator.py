@@ -22,18 +22,19 @@ class Evaluator:
             
         try:
             prompt = f"""
-            You are a highly selective Music Curator.
+            You are a strict Music Critic and Curator.
             
             SCENE NARRATIVE:
             "{scene_narrative}"
             
-            CANDIDATE TRACKS:
+            CANDIDATE TRACKS (Total: {len(tracks)}):
             {json.dumps([{ 'id': t['id'], 'name': t['name'], 'artist': t['artist'] } for t in tracks])}
             
             TASK:
-            1. Select the top 5 tracks that BEST match the narrative.
-            2. Reject any tracks that clash (e.g., Happy Pop for a Melancholic scene).
-            3. Write a creative 1-sentence explanation for why each selected track fits.
+            1. Analyze all {len(tracks)} candidates.
+            2. FILTER: Discard generic matches. Keep only tracks that deeply resonate with the scene's mood.
+            3. RERANK: Select top 5 tracks.
+            4. EXPLAIN: Write a creative 1-sentence explanation for each.
             
             Return ONLY valid JSON:
             {{
