@@ -31,7 +31,7 @@ Muse.AI uses a **LangGraph-based state machine** with specialized agents that wo
 
 4.  **🧠 Long-Term Memory (Reinforcement Learning Lite)**
     *   **Learns Your Taste**: Every "Like" builds your musical profile
-    *   **Persistent Preferences**: Stored in `user_likes.json` across sessions
+    *   **Persistent Preferences**: Stored in **Firestore** across sessions
     *   **Adaptive Recommendations**: Future analyses incorporate your preferred artists and genres
     *   **Context-Aware**: Balances your taste with the photo's vibe (doesn't force jazz onto a metal scene)
     *   **Feedback Loop**: "Make it more 80s" → Re-runs pipeline with adjusted parameters
@@ -80,7 +80,7 @@ Muse.AI uses a **LangGraph-based state machine** with specialized agents that wo
 ### AI & Agent Framework
 *   **Google Gemini 3 Flash Preview**: Multimodal vision analysis + text generation/reasoning
 *   **LangGraph**: Stateful agent orchestration and workflow management
-*   **Vectra**: Local vector database for semantic search over liked tracks
+
 *   **Spotify Web API**: Recommendations API with audio features + track search
 
 ### Application Stack
@@ -131,9 +131,9 @@ python main.py
 **API Endpoints:**
 - `POST /analyze-photo` - Upload photo, get recommendations
 - `POST /refine` - Provide feedback to refine results
-- `POST /like-track` - Save track to your playlists
-- `GET /playlists/{user_id}` - Get your saved playlists
-- `GET /dashboard/{user_id}` - Get listening stats
+- `POST /like-track` - Save track to your favorites
+- `GET /stats` - Get your listening stats (Top Artists)
+
 
 ### 3. Frontend Setup
 
@@ -356,7 +356,7 @@ Curator Agent:
 → "Midnight City by M83 - Energetic yet introspective, matches the vibe"
 
 User: Likes 2 tracks (Kavinsky, M83)
-→ Saved to user_likes.json
+→ Saved to Firestore
 → System now knows: User likes electronic, synth-pop
 ```
 

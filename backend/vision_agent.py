@@ -52,7 +52,11 @@ class VisionAgent:
                     "target_danceability": 0.5, # (0.0 is static, 1.0 is danceable)
                     "target_acousticness": 0.5 # (0.0 is digital, 1.0 is organic/acoustic)
                 },
-                "search_query_suggestion": "string to use for backup text search"
+                "search_queries": [
+                    "genre:primary_genre mood_keyword",
+                    "descriptive visual query",
+                    "emotional vibe query"
+                ]
             }
             """
             

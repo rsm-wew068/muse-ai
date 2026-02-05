@@ -23,3 +23,4 @@ class MuseState(TypedDict):
     user_feedback: Optional[str]
     iteration_count: int
     user_preferences: Optional[str]
+    search_queries: List[str]

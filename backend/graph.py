@@ -27,6 +27,7 @@ def vision_node(state: MuseState):
     return {
         "vibe_description": analysis.get("scene_narrative", ""),
         "search_parameters": analysis.get("musical_parameters", {}),
+        "search_queries": analysis.get("search_queries", []),
         "iteration_count": state.get("iteration_count", 0) + 1
     }
 
@@ -55,13 +56,38 @@ def search_node(state: MuseState):
     print(f"Audio Features: {targets}")
     print("="*40 + "\n")
     
-    if seeds:
+    queries = state.get("search_queries", [])
+    
+    all_tracks = []
+    seen_ids = set()
+
+    if queries:
+        print(f"🕵️ Multi-Query Strategy: {queries}")
+        for q in queries:
+            print(f"   -> Executing: {q}")
+            # Note: We use search_tracks directly now as our "Smart Search"
+            results = spotify.search_tracks({"keywords": [q]}, limit=10)
+            for t in results:
+                if t['id'] not in seen_ids:
+                    all_tracks.append(t)
+                    seen_ids.add(t['id'])
+    
+    # Fallback to legacy seed-based generation if no queries from vision
+    if not all_tracks and seeds:
         print(f"Searching with seeds: {seeds} and targets: {targets}")
+        # This calls our hacked get_recommendations which also does search
         tracks = spotify.get_recommendations(seeds, targets, limit=15)
-    else:
-        print("No seeds found, falling back to keyword search")
-        # Fallback if Vision params are missing (e.g. mock mode)
-        tracks = spotify.search_tracks({"keywords": ["pop"]}, limit=15)
+        for t in tracks:
+             if t['id'] not in seen_ids:
+                all_tracks.append(t)
+                seen_ids.add(t['id'])
+
+    tracks = all_tracks[:30] # Cap total candidates passed to Curator
+    
+    if not tracks:
+         print("No seeds/queries found, falling back to keyword search")
+         # Fallback if Vision params are missing (e.g. mock mode)
+         tracks = spotify.search_tracks({"keywords": ["pop"]}, limit=15)
         
     return {"candidate_tracks": tracks}
 
