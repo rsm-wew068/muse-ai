@@ -18,10 +18,11 @@ def vision_node(state: MuseState):
     """
     image_data = state["image_data"]
     feedback = state.get("user_feedback")
+    prefs = state.get("user_preferences")
     
     print(f"--- Vision Node -- Feedback: {feedback}")
     
-    analysis = vision.analyze_image(image_data, user_feedback=feedback)
+    analysis = vision.analyze_image(image_data, user_feedback=feedback, user_preferences=prefs)
     
     return {
         "vibe_description": analysis.get("scene_narrative", ""),

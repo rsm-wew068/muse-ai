@@ -22,3 +22,4 @@ class MuseState(TypedDict):
     final_recommendations: List[Recommendation]
     user_feedback: Optional[str]
     iteration_count: int
+    user_preferences: Optional[str]

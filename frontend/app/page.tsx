@@ -12,6 +12,7 @@ export default function Home() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [refineText, setRefineText] = useState("");
   const [isRefining, setIsRefining] = useState(false);
+  const [likedTracks, setLikedTracks] = useState<Set<string>>(new Set());
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -21,6 +22,7 @@ export default function Home() {
       setResult(null);
       setSessionId(null);
       setRefineText("");
+      setLikedTracks(new Set());
     }
   };
 
@@ -77,6 +79,28 @@ export default function Home() {
       console.error('Refine Error:', error);
     } finally {
       setIsRefining(false);
+    }
+  };
+
+  const handleLike = async (track: any) => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://muse-backend-2vu4yee5ha-uc.a.run.app';
+      await fetch(`${apiUrl}/like-track`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          track_id: track.id,
+          track_name: track.name,
+          artist_name: track.artist
+        })
+      });
+      setLikedTracks(prev => {
+        const newSet = new Set(prev);
+        newSet.add(track.id);
+        return newSet;
+      });
+    } catch (e) {
+      console.error("Failed to like track", e);
     }
   };
 
@@ -239,6 +263,20 @@ export default function Home() {
                       </div>
 
                       <div className="flex gap-3">
+                        <button
+                          onClick={() => handleLike(rec.track)}
+                          disabled={likedTracks.has(rec.track.id)}
+                          className={`p-2 rounded-full border transition-all ${likedTracks.has(rec.track.id)
+                              ? 'bg-red-500/20 border-red-500 text-red-500'
+                              : 'border-slate-600 text-slate-400 hover:border-red-400 hover:text-red-400'
+                            }`}
+                          title="Like this track to improve future recommendations"
+                        >
+                          <svg className="w-5 h-5" fill={likedTracks.has(rec.track.id) ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                        </button>
+
                         <a
                           href={rec.track.spotify_url}
                           target="_blank"

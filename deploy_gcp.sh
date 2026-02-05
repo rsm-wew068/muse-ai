@@ -26,7 +26,7 @@ gcloud run deploy muse-backend \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars GEMINI_API_KEY=$GEMINI_API_KEY,SPOTIFY_CLIENT_ID=$SPOTIFY_CLIENT_ID,SPOTIFY_CLIENT_SECRET=$SPOTIFY_CLIENT_SECRET
+  --set-env-vars GEMINI_API_KEY=$GEMINI_API_KEY,SPOTIFY_CLIENT_ID=$SPOTIFY_CLIENT_ID,SPOTIFY_CLIENT_SECRET=$SPOTIFY_CLIENT_SECRET,LANGSMITH_TRACING=$LANGSMITH_TRACING,LANGSMITH_ENDPOINT=$LANGSMITH_ENDPOINT,LANGSMITH_API_KEY=$LANGSMITH_API_KEY,LANGSMITH_PROJECT=$LANGSMITH_PROJECT
 
 BACKEND_URL=$(gcloud run services describe muse-backend --platform managed --region us-central1 --format 'value(status.url)')
 echo "✅ Backend deployed at: $BACKEND_URL"

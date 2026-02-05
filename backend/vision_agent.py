@@ -17,10 +17,10 @@ class VisionAgent:
             self.model = None
             print("Warning: GEMINI_API_KEY not found")
     
-    def analyze_image(self, image_data: bytes, user_feedback: str = None) -> dict:
+    def analyze_image(self, image_data: bytes, user_feedback: str = None, user_preferences: str = None) -> dict:
         """
         Analyzes an image and extracts detailed musical parameters.
-        Iteratively refines based on user_feedback if provided.
+        Iteratively refines based on user_feedback and history if provided.
         """
         if not self.model:
             return self._mock_analysis()
@@ -57,6 +57,9 @@ class VisionAgent:
             """
             
             final_prompt = [base_prompt, json_structure, image]
+
+            if user_preferences:
+                 final_prompt.append(f"\nUSER HISTORICAL PREFERENCES (Long Term Memory): {user_preferences}. \\nTry to incorporate these preferred genres or styles if they fit the visual vibe, but prioritize the match to the image.")
             
             if user_feedback:
                 final_prompt.append(f"\nIMPORTANT UPDATE FROM USER: The user reviewed previous results and said: '{user_feedback}'. adjust your analysis parameters to respect this feedback.")
