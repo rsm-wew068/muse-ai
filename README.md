@@ -262,7 +262,7 @@ LangGraph State Machine invokes:
 Returns: recommendations + session_id
     ↓
 User clicks "Like" on track → Stored in:
-    - user_likes.json (persistent storage)
+    - Google Cloud Firestore (Serverless NoSQL)
     - Builds user preference profile
     ↓
 (Optional) User sends feedback: "Make it more upbeat"
@@ -290,7 +290,7 @@ class MuseState(TypedDict):
 ### Personalization Engine
 
 **How Memory Works:**
-1. User likes a track → Saved to `user_likes.json`
+1. User likes a track → Saved to Firestore
 2. On next photo upload → System loads liked tracks
 3. Summarizes preferences: "User likes artists: Radiohead, Bon Iver. Recently liked: Fake Plastic Trees, Holocene"
 4. Vision Agent receives preferences as context
