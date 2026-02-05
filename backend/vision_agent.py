@@ -53,7 +53,7 @@ class VisionAgent:
                     "target_acousticness": 0.5 # (0.0 is digital, 1.0 is organic/acoustic)
                 },
                 "search_queries": [
-                    "genre:primary_genre mood_keyword",
+                    "primary_genre mood_keyword",
                     "descriptive visual query",
                     "emotional vibe query"
                 ]
@@ -94,5 +94,9 @@ class VisionAgent:
                 "target_danceability": 0.9,
                 "target_acousticness": 0.1
             },
-            "search_query_suggestion": "neon city night drive"
+            "search_queries": [
+                "neon city night drive",
+                "urban synthwave late night",
+                "fast electronic nightscape"
+            ]
         }

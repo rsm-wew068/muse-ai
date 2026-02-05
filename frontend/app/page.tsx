@@ -1,18 +1,70 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"assistant" | "playlists" | "stats">("assistant");
+  const [playlists, setPlaylists] = useState<Record<string, any[]>>({});
+  const [stats, setStats] = useState<any>(null);
+  const [currentQuery, setCurrentQuery] = useState<string | null>(null);
 
   // Refinement State
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [refineText, setRefineText] = useState("");
   const [isRefining, setIsRefining] = useState(false);
   const [likedTracks, setLikedTracks] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const existing = window.localStorage.getItem("muse_user_id");
+    if (existing) {
+      setUserId(existing);
+      return;
+    }
+    let newId: string;
+    if (crypto?.randomUUID) {
+      newId = crypto.randomUUID();
+    } else {
+      newId = `muse_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    }
+    window.localStorage.setItem("muse_user_id", newId);
+    setUserId(newId);
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    fetchPlaylists();
+    fetchStats();
+  }, [userId]);
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://muse-backend-2vu4yee5ha-uc.a.run.app';
+
+  const fetchPlaylists = async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`${apiBase}/playlists?user_id=${encodeURIComponent(userId)}`);
+      const data = await res.json();
+      setPlaylists(data.playlists || {});
+    } catch (e) {
+      console.error('Error fetching playlists', e);
+    }
+  };
+
+  const fetchStats = async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`${apiBase}/stats?user_id=${encodeURIComponent(userId)}`);
+      const data = await res.json();
+      setStats(data);
+    } catch (e) {
+      console.error('Error fetching stats', e);
+    }
+  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -27,7 +79,7 @@ export default function Home() {
   };
 
   const handleAnalyze = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage || !userId) return;
 
     setLoading(true);
     setResult(null);
@@ -36,10 +88,10 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append('file', selectedImage);
+      formData.append('user_id', userId);
 
       // Use env var or default to localhost
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://muse-backend-2vu4yee5ha-uc.a.run.app';
-      const response = await fetch(`${apiUrl}/analyze-photo`, {
+      const response = await fetch(`${apiBase}/analyze-photo`, {
         method: 'POST',
         body: formData,
       });
@@ -47,6 +99,7 @@ export default function Home() {
       const data = await response.json();
       setResult(data);
       setSessionId(data.session_id);
+      setCurrentQuery(data.search_queries?.[0] || null);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -55,25 +108,26 @@ export default function Home() {
   };
 
   const handleRefine = async () => {
-    if (!sessionId || !refineText) return;
+    if (!sessionId || !refineText || !userId) return;
 
     setIsRefining(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://muse-backend-2vu4yee5ha-uc.a.run.app';
-      const response = await fetch(`${apiUrl}/refine`, {
+      const response = await fetch(`${apiBase}/refine`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           session_id: sessionId,
-          feedback: refineText
+          feedback: refineText,
+          user_id: userId
         }),
       });
 
       const data = await response.json();
       setResult(data); // Update results with new refined data
+      setCurrentQuery(data.search_queries?.[0] || null);
       setRefineText(""); // Clear input
     } catch (error) {
       console.error('Refine Error:', error);
@@ -83,15 +137,18 @@ export default function Home() {
   };
 
   const handleLike = async (track: any) => {
+    if (!userId) return;
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://muse-backend-2vu4yee5ha-uc.a.run.app';
-      await fetch(`${apiUrl}/like-track`, {
+      await fetch(`${apiBase}/like-track`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           track_id: track.id,
           track_name: track.name,
-          artist_name: track.artist
+          artist_name: track.artist,
+          user_id: userId,
+          playlist_name: currentQuery || "Uncategorized",
+          spotify_url: track.spotify_url
         })
       });
       setLikedTracks(prev => {
@@ -99,6 +156,8 @@ export default function Home() {
         newSet.add(track.id);
         return newSet;
       });
+      await fetchPlaylists();
+      await fetchStats();
     } catch (e) {
       console.error("Failed to like track", e);
     }
@@ -118,7 +177,24 @@ export default function Home() {
           Upload a photo. Let AI analyze the vibe. Discover the perfect soundtrack.
         </p>
 
+        <div className="flex gap-2">
+          {["assistant", "playlists", "stats"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as typeof activeTab)}
+              className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                activeTab === tab
+                  ? "bg-cyan-600 border-cyan-500 text-white"
+                  : "bg-slate-900/50 border-slate-700 text-slate-300"
+              }`}
+            >
+              {tab === "assistant" ? "Assistant" : tab === "playlists" ? "Playlists" : "Stats"}
+            </button>
+          ))}
+        </div>
+
         {/* Upload Section */}
+        {activeTab === "assistant" && (
         <div className="w-full bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 border border-slate-800 shadow-2xl">
           <div className="flex flex-col items-center gap-4">
             {previewUrl ? (
@@ -164,8 +240,8 @@ export default function Home() {
 
               <button
                 onClick={handleAnalyze}
-                disabled={loading || !selectedImage}
-                className={`px-8 py-3 rounded-xl font-bold text-lg transition-all ${loading || !selectedImage
+                disabled={loading || !selectedImage || !userId}
+                className={`px-8 py-3 rounded-xl font-bold text-lg transition-all ${loading || !selectedImage || !userId
                   ? 'bg-slate-700 cursor-not-allowed'
                   : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:scale-105 shadow-lg shadow-cyan-500/20'
                   }`}
@@ -175,8 +251,71 @@ export default function Home() {
             </div>
           </div>
         </div>
+        )}
 
-        {result && (
+        {activeTab === "playlists" && (
+          <div className="w-full bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 border border-slate-800 shadow-2xl">
+            <h3 className="text-2xl font-bold text-white mb-4">Playlists</h3>
+            {Object.keys(playlists).length === 0 ? (
+              <p className="text-slate-400">No liked tracks yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(playlists).map(([name, tracks]) => (
+                  <div key={name} className="bg-slate-900/70 rounded-xl p-4 border border-slate-700">
+                    <h4 className="text-lg font-bold text-cyan-300 mb-3">{name}</h4>
+                    <div className="space-y-2">
+                      {tracks.map((t: any) => (
+                        <div key={t.id} className="flex items-center justify-between text-slate-200">
+                          <span>{t.name} — {t.artist}</span>
+                          <button
+                            className="text-xs px-2 py-1 rounded bg-slate-800 border border-slate-700"
+                            onClick={() => t.spotify_url && window.open(t.spotify_url, "_blank")}
+                          >
+                            Open
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "stats" && (
+          <div className="w-full bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 border border-slate-800 shadow-2xl">
+            <h3 className="text-2xl font-bold text-white mb-4">Stats</h3>
+            {!stats ? (
+              <p className="text-slate-400">No stats yet.</p>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-slate-900/70 rounded-xl p-4 border border-slate-700">
+                  <div className="text-slate-300">Total Likes</div>
+                  <div className="text-3xl font-bold text-cyan-400">{stats.total_likes ?? 0}</div>
+                </div>
+                <div className="bg-slate-900/70 rounded-xl p-4 border border-slate-700">
+                  <div className="text-slate-300 mb-2">Top Artists</div>
+                  <div className="space-y-1">
+                    {(stats.top_artists || []).map((a: any) => (
+                      <div key={a.name} className="text-slate-200">{a.name} — {a.count}</div>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-slate-900/70 rounded-xl p-4 border border-slate-700">
+                  <div className="text-slate-300 mb-2">Recent Likes</div>
+                  <div className="space-y-1">
+                    {(stats.recent_tracks || []).map((t: any) => (
+                      <div key={t.id} className="text-slate-200">{t.name} — {t.artist}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {result && activeTab === "assistant" && (
           <div className="w-full animate-fade-in-up pb-20">
             {/* Vibe Analysis */}
             <div className="bg-slate-900/80 rounded-2xl p-6 border border-slate-700 mb-6">

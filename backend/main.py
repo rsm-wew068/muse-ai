@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Body
+from fastapi import FastAPI, HTTPException, UploadFile, File, Body, Form
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 import os
@@ -22,12 +22,13 @@ app.add_middleware(
 )
 
 # In-memory session store (Simple for Hackathon)
-# session_id -> { "image_data": bytes, "history": [] }
+# session_id -> { "image_data": bytes, "history": [], "user_id": str }
 SESSIONS: Dict[str, Dict] = {}
 
 class RefineRequest(BaseModel):
     session_id: str
     feedback: str
+    user_id: Optional[str] = None
 
 from google.cloud import firestore
 import datetime
@@ -40,12 +41,16 @@ except Exception as e:
     print(f"⚠️ Firestore init failed (local?): {e}")
     db = None
 
-def get_liked_tracks():
+def get_liked_tracks(user_id: Optional[str]):
     if not db:
         return []
     try:
-        # Get last 20 likes, ordered by timestamp desc
-        docs = db.collection("global_likes") \
+        if not user_id:
+            return []
+        # Get last 20 likes for this user, ordered by timestamp desc
+        docs = db.collection("users") \
+                 .document(user_id) \
+                 .collection("likes") \
                  .order_by("timestamp", direction=firestore.Query.DESCENDING) \
                  .limit(20) \
                  .stream()
@@ -54,21 +59,27 @@ def get_liked_tracks():
         print(f"Error fetching likes: {e}")
         return []
 
-def save_like(track_data: dict):
+def save_like(user_id: Optional[str], track_data: dict):
     if not db:
         return
     try:
+        if not user_id:
+            return
         # Add timestamp
         track_data["timestamp"] = datetime.datetime.now(datetime.timezone.utc)
         # Use track_id as document ID to prevent duplicates
-        db.collection("global_likes").document(track_data['id']).set(track_data)
+        db.collection("users") \
+          .document(user_id) \
+          .collection("likes") \
+          .document(track_data["id"]) \
+          .set(track_data)
         print(f"Saved like: {track_data['name']}")
     except Exception as e:
         print(f"Error saving like: {e}")
 
-def get_user_preferences() -> str:
+def get_user_preferences(user_id: Optional[str]) -> str:
     """Summarize liked tracks for the AI agent."""
-    likes = get_liked_tracks()
+    likes = get_liked_tracks(user_id)
     if not likes:
         return ""
     
@@ -84,13 +95,18 @@ class LikeRequest(BaseModel):
     track_id: str
     track_name: str
     artist_name: str
+    user_id: Optional[str] = None
+    playlist_name: Optional[str] = None
+    spotify_url: Optional[str] = None
 
 @app.post("/like-track")
 async def like_track(request: LikeRequest):
-    save_like({
+    save_like(request.user_id, {
         "id": request.track_id,
         "name": request.track_name,
-        "artist": request.artist_name
+        "artist": request.artist_name,
+        "playlist_name": request.playlist_name or "Uncategorized",
+        "spotify_url": request.spotify_url
     })
     return {"status": "liked"}
 
@@ -99,7 +115,7 @@ def health_check():
     return {"status": "ok", "service": "Muse.AI - Agentic Music Curator"}
 
 @app.post("/analyze-photo")
-async def analyze_photo(file: UploadFile = File(...)):
+async def analyze_photo(file: UploadFile = File(...), user_id: Optional[str] = Form(None)):
     """
     Starts the refinement loop.
     """
@@ -112,11 +128,12 @@ async def analyze_photo(file: UploadFile = File(...)):
     session_id = str(uuid.uuid4())
     SESSIONS[session_id] = {
         "image_data": image_data,
-        "iteration": 0
+        "iteration": 0,
+        "user_id": user_id
     }
     
     # Get user preferences
-    prefs = get_user_preferences()
+    prefs = get_user_preferences(user_id)
     print(f"Injecting user preferences: {prefs}")
 
     # Run Graph
@@ -134,6 +151,7 @@ async def analyze_photo(file: UploadFile = File(...)):
         "session_id": session_id,
         "vibe_analysis": result.get("vibe_description"),
         "search_parameters": result.get("search_parameters"),
+        "search_queries": result.get("search_queries", []),
         "recommendations": result.get("final_recommendations", [])
     }
 
@@ -152,7 +170,11 @@ async def refine_playlist(request: RefineRequest):
     print(f"Refining session {session_id} with feedback: {request.feedback}")
     
     # Get user preferences again (in case they liked something mid-session)
-    prefs = get_user_preferences()
+    if request.user_id:
+        user_id = request.user_id
+    else:
+        user_id = session.get("user_id")
+    prefs = get_user_preferences(user_id)
 
     # Run Graph with Feedback
     state = {
@@ -172,13 +194,24 @@ async def refine_playlist(request: RefineRequest):
         "session_id": session_id,
         "vibe_analysis": result.get("vibe_description"), # Narrative might change
         "search_parameters": result.get("search_parameters"),
+        "search_queries": result.get("search_queries", []),
         "recommendations": result.get("final_recommendations", [])
     }
 
+@app.get("/playlists")
+def get_playlists(user_id: Optional[str] = None):
+    """Returns playlists grouped by playlist_name for the given user."""
+    likes = get_liked_tracks(user_id)
+    playlists: Dict[str, list] = {}
+    for track in likes:
+        playlist_name = track.get("playlist_name") or "Uncategorized"
+        playlists.setdefault(playlist_name, []).append(track)
+    return {"playlists": playlists}
+
 @app.get("/stats")
-def get_stats():
+def get_stats(user_id: Optional[str] = None):
     """Returns aggregated user stats from Firestore."""
-    likes = get_liked_tracks() # Gets up to 20 currently, maybe bump limit inside get_liked_tracks for better stats
+    likes = get_liked_tracks(user_id) # Gets up to 20 currently, maybe bump limit inside get_liked_tracks for better stats
     
     # Calculate top artists
     artist_counts = {}

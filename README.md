@@ -17,10 +17,10 @@ Muse.AI uses a **LangGraph-based state machine** with specialized agents that wo
     *   **Feedback Aware**: "Make it more upbeat" → recalibrates valence/energy parameters
 
 2.  **🎼 The Musicologist (Smart Search)**
-    *   **Smart Query Translation**: Converts abstract audio parameters (low energy, sad) into search syntax (`genre:indie chill`)
-    *   **Spotify Search API**: Uses the robust Search endpoint to find tracks matching the visual vibe
-    *   **Precision Targeting**: Combines Genre + Mood keywords for high relevance
-    *   **Output**: 15 candidate tracks that contextually match the scene
+    *   **Smart Query Translation**: Converts abstract audio parameters (low energy, sad) into search phrases (`indie chill`)
+    *   **Spotify Search API**: Uses the Search endpoint to retrieve candidates
+    *   **Multi-Query Fan-Out**: Runs multiple search queries per photo for higher recall
+    *   **Output**: Up to 30 candidate tracks, then reranked by the Curator
 
 3.  **⚖️ The Curator (Gemini 3 Flash - The Critic)**
     *   **What it does**: Acts as quality control—reviews candidates against the scene narrative
@@ -46,7 +46,7 @@ Muse.AI uses a **LangGraph-based state machine** with specialized agents that wo
 ### 🎨 Visuals to Vibes
 *   **Photo Analysis**: Upload any image—sunset, city street, cozy cafe, adventure scene
 *   **Scene Understanding**: AI extracts mood, energy, aesthetic, and narrative
-*   **Audio Feature Mapping**: Translates visual vibes into Spotify's psycho-acoustic parameters
+*   **Audio Feature Mapping**: Translates visual vibes into search-friendly parameters and queries
 *   **Beyond Keywords**: Understands implied temperature, noise level, and emotional subtext
 
 ### 🧠 Long-Term Memory (Reinforcement Learning Lite)
@@ -80,20 +80,19 @@ Muse.AI uses a **LangGraph-based state machine** with specialized agents that wo
 ### AI & Agent Framework
 *   **Google Gemini 3 Flash Preview**: Multimodal vision analysis + text generation/reasoning
 *   **LangGraph**: Stateful agent orchestration and workflow management
-
-*   **Spotify Web API**: Recommendations API with audio features + track search
+*   **Spotify Web API**: Search API for track retrieval
 
 ### Application Stack
 *   **Frontend**: Next.js 16 (React 19) + TailwindCSS v4 + Glassmorphism UI
 *   **Backend**: FastAPI (Python 3.11+) + Pydantic for type safety
-*   **Storage**: JSON-based persistence + vector embeddings
+*   **Storage**: Firestore (per-user likes)
 *   **Infrastructure**: Docker + Google Cloud Run with auto-scaling
 
 ### Key Libraries
 *   `langgraph` - Agent state machine
 *   `google-generativeai` - Gemini API client
-*   `spotify-web-api-node` - Spotify integration
-*   `vectra` - Vector similarity search
+*   `google-cloud-firestore` - Per-user memory storage
+*   `requests` - Spotify Web API integration
 *   `pillow` - Image processing
 
 ## ⚡️ Quick Start
@@ -119,7 +118,7 @@ SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 ```bash
 cd backend
 
-# Install dependencies (includes LangGraph, Vectra, FastAPI)
+# Install dependencies (includes LangGraph, FastAPI)
 pip install -r requirements.txt
 
 # Run the Agent API
@@ -129,10 +128,11 @@ python main.py
 *Backend runs on `http://localhost:8000`*
 
 **API Endpoints:**
-- `POST /analyze-photo` - Upload photo, get recommendations
-- `POST /refine` - Provide feedback to refine results
-- `POST /like-track` - Save track to your favorites
-- `GET /stats` - Get your listening stats (Top Artists)
+- `POST /analyze-photo` - Upload photo, get recommendations (expects `user_id` in form data)
+- `POST /refine` - Provide feedback to refine results (expects `user_id`)
+- `POST /like-track` - Save track to your favorites (expects `user_id`)
+- `GET /stats` - Get your listening stats (Top Artists) via `?user_id=...`
+- `GET /playlists` - Get playlists grouped by query via `?user_id=...`
 
 
 ### 3. Frontend Setup
@@ -156,8 +156,7 @@ npm run dev
 3. Wait for the agents to analyze and recommend tracks
 4. Like tracks you enjoy to build your profile
 5. Try refining: "Make it more energetic" or "Add some jazz"
-6. Check the Playlists tab to see your saved tracks
-7. View Dashboard for personalized stats
+6. Explore Playlists and Stats in the UI tabs
 
 ## ☁️ Deployment (Google Cloud Run)
 
@@ -218,8 +217,6 @@ Set these in Cloud Run console or via `gcloud`:
 - `GEMINI_API_KEY` - Your Gemini API key
 - `SPOTIFY_CLIENT_ID` - Spotify app client ID
 - `SPOTIFY_CLIENT_SECRET` - Spotify app secret
-- `DATA_DIR` - `/data` (for persistent storage with Cloud Storage mount)
-
 ## 🧠 System Architecture
 
 ### Data Flow
@@ -243,10 +240,10 @@ LangGraph State Machine invokes:
     ┌─────────────────────────────────────────┐
     │ 2. SEARCH NODE (Smart Query Agent)      │
     │    - Translates vibes to Search Queries │
-    │      (e.g., "genre:indie melancholic")  │
-    │    - Uses Spotify Search API (Reliable) │
-    │    - Bypasses API restrictions          │
-    │    - Output: 15 candidate tracks        │
+    │      (e.g., "indie melancholic")        │
+    │    - Uses Spotify Search API            │
+    │    - Multi-query fan-out                │
+    │    - Output: up to 30 candidates        │
     └─────────────────────────────────────────┘
                     ↓
     ┌─────────────────────────────────────────┐
@@ -280,6 +277,7 @@ class MuseState(TypedDict):
     image_data: bytes                    # Original photo
     vibe_description: str                # "Melancholic rainy day..."
     search_parameters: dict              # {valence: 0.2, energy: 0.3, seed_genres: [...]}
+    search_queries: list                 # ["indie melancholic", "late night synth"]
     candidate_tracks: list               # Raw results from Spotify
     final_recommendations: list          # Curated top 5 with explanations
     user_feedback: Optional[str]         # "Make it more upbeat"
@@ -331,7 +329,7 @@ With Memory:
 ### For Developers
 - Example of production-ready LangGraph agents
 - Multimodal AI integration patterns
-- Hybrid search (API + vector DB) implementation
+- Query fan-out + LLM reranking implementation
 - A/B testing infrastructure for ML systems
 
 ## 📊 Example Interactions
@@ -347,8 +345,8 @@ Vision Agent:
 → Genres: electronic, synth-pop
 
 Search Agent: 
-→ Queries Spotify Recommendations API
-→ Finds 15 candidates
+→ Queries Spotify Search API
+→ Finds up to 30 candidates
 
 Curator Agent: 
 → Filters to 5 tracks
@@ -372,7 +370,7 @@ Vision Agent:
 → Genres: chillwave, indie-electronic (hybrid of user taste + scene)
 
 Search Agent:
-→ Finds 15 tracks blending electronic + acoustic
+→ Finds up to 30 tracks blending electronic + acoustic
 
 Curator Agent:
 → Validates: "Tycho fits—electronic but organic"
@@ -395,7 +393,7 @@ Vision Agent:
 → Genres: ambient, classical
 
 Search Agent:
-→ Returns 15 tracks including:
+→ Returns candidates including:
   - "Clair de Lune" (perfect)
   - "Thunderstruck" by AC/DC (Spotify glitch—high acousticness guitar?)
 
@@ -440,20 +438,19 @@ Curator Agent (The Critic):
 - Stateless backend (sessions in memory/DB)
 - Containerized for cloud deployment
 - Error handling and fallbacks throughout
-- Valid genre seeds (no Spotify API errors)
 - Token refresh for long-running sessions
 
 ## 🧪 Future Enhancements
 
 **Vector Embeddings (Coming Soon)**
-- Semantic search across liked tracks using Vectra
+- Semantic search across liked tracks using a vector store
 - "Find tracks that *feel* like my favorites"
 - Hybrid ranking: Spotify + Vector similarity
 
-**Multi-tab Interface (In Progress)**
-- Tab 1: Photo Upload (current)
-- Tab 2: My Playlists (liked tracks organized by vibe)
-- Tab 3: Dashboard (stats, top artists, listening patterns)
+**Multi-tab Interface**
+- Tab 1: Assistant (photo → recommendations)
+- Tab 2: Playlists (liked tracks grouped by query)
+- Tab 3: Stats (top artists, listening patterns)
 
 **Audio Feature Profiling**
 - Calculate average danceability, energy, valence from liked tracks

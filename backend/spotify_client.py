@@ -52,7 +52,7 @@ class SpotifyClient:
     def get_recommendations(self, seed_genres: list, target_params: dict, limit: int = 10):
         """
         FALLBACK: Uses Search API because v1/recommendations is restricted.
-        Constructs a query like 'genre:pop upbeat' based on params.
+        Constructs a query like 'pop upbeat' based on params.
         """
         if not self.access_token:
             return self._mock_tracks()
@@ -62,8 +62,8 @@ class SpotifyClient:
         # 1. Construct Vibe Keywords
         query_parts = []
         if seed_genres:
-            # Use primary genre
-            query_parts.append(f'genre:"{seed_genres[0]}"')
+            # Use primary genre as a plain keyword (Search API doesn't support genre field filters)
+            query_parts.append(seed_genres[0])
         
         # Map energy/valence to keywords
         valence = target_params.get("target_valence", 0.5)
