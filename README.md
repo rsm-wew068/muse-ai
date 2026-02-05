@@ -71,7 +71,7 @@ Muse.AI uses a **LangGraph-based state machine** with specialized agents that wo
 
 ### 🎯 Production Features
 *   **Session Management**: Persistent user profiles and preferences
-*   **Real-time Stats**: Track your top artists, genres, and listening patterns (coming soon)
+*   **Real-time Stats**: Track your top artists via the /stats endpoint
 *   **Cloud Deployment**: Containerized and ready for Google Cloud Run
 *   **API-First Design**: RESTful endpoints for integration
 

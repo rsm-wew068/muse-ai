@@ -175,6 +175,26 @@ async def refine_playlist(request: RefineRequest):
         "recommendations": result.get("final_recommendations", [])
     }
 
+@app.get("/stats")
+def get_stats():
+    """Returns aggregated user stats from Firestore."""
+    likes = get_liked_tracks() # Gets up to 20 currently, maybe bump limit inside get_liked_tracks for better stats
+    
+    # Calculate top artists
+    artist_counts = {}
+    for track in likes:
+        artist = track.get("artist", "Unknown").split(",")[0].strip()
+        artist_counts[artist] = artist_counts.get(artist, 0) + 1
+        
+    sorted_artists = sorted(artist_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    top_artists = [{"name": name, "count": count} for name, count in sorted_artists]
+    
+    return {
+        "total_likes": len(likes),
+        "top_artists": top_artists,
+        "recent_tracks": likes[:5]
+    }
+
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 8000))
