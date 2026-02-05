@@ -51,29 +51,53 @@ class SpotifyClient:
     
     def get_recommendations(self, seed_genres: list, target_params: dict, limit: int = 10):
         """
-        Get recommendations based on audio features (valence, energy, etc.)
+        FALLBACK: Uses Search API because v1/recommendations is restricted.
+        Constructs a query like 'genre:pop upbeat' based on params.
         """
         if not self.access_token:
             return self._mock_tracks()
             
         self._ensure_valid_token()
         
-        url = "https://api.spotify.com/v1/recommendations"
+        # 1. Construct Vibe Keywords
+        query_parts = []
+        if seed_genres:
+            # Use primary genre
+            query_parts.append(f'genre:"{seed_genres[0]}"')
+        
+        # Map energy/valence to keywords
+        valence = target_params.get("target_valence", 0.5)
+        energy = target_params.get("target_energy", 0.5)
+        
+        mood_keywords = []
+        if energy > 0.7: mood_keywords.append("upbeat")
+        elif energy < 0.3: mood_keywords.append("chill")
+        
+        if valence < 0.3: mood_keywords.append("sad") 
+        elif valence > 0.7: mood_keywords.append("happy")
+        
+        if mood_keywords:
+            query_parts.append(" ".join(mood_keywords))
+            
+        query = " ".join(query_parts)
+        if not query.strip():
+            query = "year:2024" # Ultimate fallback
+            
+        print(f"🔄 Search Query Strategy: '{query}'")
+        
+        # 2. Call Search API
+        url = "https://api.spotify.com/v1/search"
         headers = {"Authorization": f"Bearer {self.access_token}"}
-        
-        # Valid seeds are required. For now, we trust Gemini or should filter against available seeds.
-        # Ideally, we should fetch available seeds and filter.
-        
         params = {
-            "limit": limit,
-            "seed_genres": ",".join(seed_genres[:5]), # Max 5 seeds
-            **target_params
+            "q": query,
+            "type": "track",
+            "limit": limit
         }
         
         try:
             response = requests.get(url, headers=headers, params=params)
             response.raise_for_status()
-            tracks = response.json()["tracks"]
+            tracks = response.json()["tracks"]["items"]
             
             return [{
                 "id": t["id"],
@@ -86,12 +110,8 @@ class SpotifyClient:
                 "duration_ms": t["duration_ms"]
             } for t in tracks]
             
-        except requests.exceptions.HTTPError as e:
-            print(f"Spotify recommendation error: {e}")
-            # Fallback to search if recommendations fail (e.g., invalid seeds)
-            return self.search_tracks({"keywords": seed_genres}, limit)
         except Exception as e:
-            print(f"Spotify recommendation error: {e}")
+            print(f"Spotify Search Fail: {e}")
             return self._mock_tracks()
 
     def search_tracks(self, vibe_analysis: dict, limit: int = 5):
