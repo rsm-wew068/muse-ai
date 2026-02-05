@@ -16,11 +16,11 @@ Muse.AI uses a **LangGraph-based state machine** with specialized agents that wo
     *   **Memory Integration**: Reads your liked tracks history and subtly biases towards your preferred genres *while still respecting the visual context*
     *   **Feedback Aware**: "Make it more upbeat" → recalibrates valence/energy parameters
 
-2.  **🎼 The Musicologist (Hybrid Search)**
-    *   **Spotify Recommendations API**: Uses audio features (valence, energy, tempo) for technical matching
-    *   **Valid Genre Seeds**: Gemini selects from 150+ valid Spotify genres (no API errors!)
-    *   **Precision Targeting**: Maps visual vibes to psycho-acoustic parameters
-    *   **Output**: 15 candidate tracks that technically match the scene
+2.  **🎼 The Musicologist (Smart Search)**
+    *   **Smart Query Translation**: Converts abstract audio parameters (low energy, sad) into search syntax (`genre:indie chill`)
+    *   **Spotify Search API**: Uses the robust Search endpoint to find tracks matching the visual vibe
+    *   **Precision Targeting**: Combines Genre + Mood keywords for high relevance
+    *   **Output**: 15 candidate tracks that contextually match the scene
 
 3.  **⚖️ The Curator (Gemini 3 Flash - The Critic)**
     *   **What it does**: Acts as quality control—reviews candidates against the scene narrative
@@ -241,11 +241,11 @@ LangGraph State Machine invokes:
     └─────────────────────────────────────────┘
                     ↓
     ┌─────────────────────────────────────────┐
-    │ 2. SEARCH NODE (Spotify Recommendations)│
-    │    - Uses audio features (valence,      │
-    │      energy, acousticness, etc.)        │
-    │    - Selects valid genre seeds          │
-    │    - Queries Spotify Recommendations API│
+    │ 2. SEARCH NODE (Smart Query Agent)      │
+    │    - Translates vibes to Search Queries │
+    │      (e.g., "genre:indie melancholic")  │
+    │    - Uses Spotify Search API (Reliable) │
+    │    - Bypasses API restrictions          │
     │    - Output: 15 candidate tracks        │
     └─────────────────────────────────────────┘
                     ↓
