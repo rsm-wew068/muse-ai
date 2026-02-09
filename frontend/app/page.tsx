@@ -323,6 +323,43 @@ export default function Home() {
               <h3 className="text-2xl font-bold text-white mb-3">Vibe Analysis</h3>
               <p className="text-slate-300 text-lg italic mb-6">"{result.vibe_analysis}"</p>
 
+              {/* Agentic Reasoning Trace */}
+              <div className="bg-slate-950/50 rounded-xl p-4 border border-slate-800 font-mono text-xs mb-6 overflow-x-auto">
+                <div className="flex items-center gap-2 mb-3 text-slate-500 uppercase tracking-widest font-bold border-b border-slate-800 pb-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                  Agentic Reasoning Trace
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-1 sm:gap-3">
+                    <span className="text-purple-400 font-bold min-w-[80px]">[VISION]</span>
+                    <span className="text-slate-300">Detected Scene Narrative & Mood</span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-1 sm:gap-3">
+                    <span className="text-cyan-400 font-bold min-w-[80px]">[STRATEGY]</span>
+                    <div className="flex flex-col">
+                      <span className="text-slate-300">Generated {result.search_queries?.length || 0} Search Queries:</span>
+                      <div className="text-slate-500 mt-1 pl-2 border-l-2 border-slate-800">
+                        {result.search_queries?.map((q: string, i: number) => (
+                          <div key={i}>→ "{q}"</div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-1 sm:gap-3">
+                    <span className="text-orange-400 font-bold min-w-[80px]">[SCOUT]</span>
+                    <span className="text-slate-300">Executed retrieval against Spotify API (Fan-out)</span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-1 sm:gap-3">
+                    <span className="text-pink-400 font-bold min-w-[80px]">[CRITIC]</span>
+                    <span className="text-slate-300">Evaluating & Reranking candidates for narrative fit...</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Tech Stats (Search Params) */}
               {result.search_parameters && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
