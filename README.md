@@ -1,7 +1,17 @@
-# Muse.AI 🎵
-> *Soundtrack for Life: The Multimodal Reasoner with Memory*
+# 🎵 Muse.AI: The Agentic Music Curator
+> **Built for the Google DeepMind Gemini 3 Hackathon** 
+> *Leveraging Gemini 3 Preview, LangGraph, and Google Cloud Run.*
 
-**Muse.AI** transforms photos into personalized soundtracks using a multi-agent AI system that **sees, reasons, critiques, and remembers**. Unlike simple keyword matchers, Muse.AI employs specialized agents that understand visual narratives, validate their own recommendations, and learn your taste over time through reinforcement learning.
+![Muse AI Preview](https://placehold.co/1200x600/1e293b/cyan?text=Muse+AI+Preview)
+
+## 💡 The Problem
+We all have moments we want to share—a rainy night drive, a crowded cyberpunk street, a quiet coffee morning. But finding the *exact* song that matches that visual vibe is frustrating. Keyword search ("sad songs") returns generic pop hits, not the deep cuts that truly fit the narrative.
+
+## 🚀 The Solution: Agentic Reasoning
+Muse.AI isn't just a wrapper. It's a **Multi-Agent System** that "sees" your photo, formulates a search strategy, scouts for candidates, and then *critiques* them like a human DJ.
+
+---
+
 
 ## 🧠 The "Muse" Agent Architecture
 
