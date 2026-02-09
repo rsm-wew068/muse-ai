@@ -167,22 +167,14 @@ Deploy both frontend and backend as auto-scaling serverless containers:
 - `gcloud` CLI installed and authenticated
 - Docker installed locally
 
-### One-Click Deployment
+### Continuous Deployment (GitOps)
 
-```bash
-# Make the script executable
-chmod +x deploy_gcp.sh
+This project includes a **GitHub Actions** workflow (`.github/workflows/deploy.yml`) that automatically builds and deploys to Google Cloud Run whenever you push to the `main` branch.
 
-# Deploy (creates Artifact Registry, builds images, deploys to Cloud Run)
-./deploy_gcp.sh
-```
-
-The script will:
-1. Create a Google Artifact Registry repository
-2. Build Docker images for frontend and backend
-3. Push images to Artifact Registry
-4. Deploy to Cloud Run with environment variables
-5. Output the public URLs for both services
+1.  Connect your GitHub repository.
+2.  Add GCP Secrets to GitHub Settings (`GCP_SA_KEY`, `GEMINI_API_KEY`, etc.).
+3.  Push to `main`.
+4.  Monitor progress in the "Actions" tab.
 
 ### Manual Deployment
 
