@@ -2,7 +2,7 @@
 > **Built for the Google DeepMind Gemini 3 Hackathon** 
 > *Leveraging Gemini 3 Preview, LangGraph, and Google Cloud Run.*
 
-![Muse AI Preview](https://placehold.co/1200x600/1e293b/cyan?text=Muse+AI+Preview)
+
 
 ## 💡 The Problem
 We all have moments we want to share—a rainy night drive, a crowded cyberpunk street, a quiet coffee morning. But finding the *exact* song that matches that visual vibe is frustrating. Keyword search ("sad songs") returns generic pop hits, not the deep cuts that truly fit the narrative.
