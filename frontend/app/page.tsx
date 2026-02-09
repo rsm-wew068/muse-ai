@@ -38,9 +38,9 @@ export default function Home() {
 
   useEffect(() => {
     if (!userId) return;
-    fetchPlaylists();
-    fetchStats();
-  }, [userId]);
+    if (activeTab === 'playlists') fetchPlaylists();
+    if (activeTab === 'stats') fetchStats();
+  }, [userId, activeTab]);
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://muse-backend-2vu4yee5ha-uc.a.run.app';
 
@@ -156,8 +156,10 @@ export default function Home() {
         newSet.add(track.id);
         return newSet;
       });
-      await fetchPlaylists();
-      await fetchStats();
+      setTimeout(() => {
+        fetchPlaylists();
+        fetchStats();
+      }, 500);
     } catch (e) {
       console.error("Failed to like track", e);
     }
@@ -182,11 +184,10 @@ export default function Home() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab as typeof activeTab)}
-              className={`px-4 py-2 rounded-full text-sm font-bold border ${
-                activeTab === tab
-                  ? "bg-cyan-600 border-cyan-500 text-white"
-                  : "bg-slate-900/50 border-slate-700 text-slate-300"
-              }`}
+              className={`px-4 py-2 rounded-full text-sm font-bold border ${activeTab === tab
+                ? "bg-cyan-600 border-cyan-500 text-white"
+                : "bg-slate-900/50 border-slate-700 text-slate-300"
+                }`}
             >
               {tab === "assistant" ? "Assistant" : tab === "playlists" ? "Playlists" : "Stats"}
             </button>
@@ -195,62 +196,62 @@ export default function Home() {
 
         {/* Upload Section */}
         {activeTab === "assistant" && (
-        <div className="w-full bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 border border-slate-800 shadow-2xl">
-          <div className="flex flex-col items-center gap-4">
-            {previewUrl ? (
-              <div className="relative w-full max-w-md">
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="w-full h-64 object-cover rounded-lg"
-                />
+          <div className="w-full bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 border border-slate-800 shadow-2xl">
+            <div className="flex flex-col items-center gap-4">
+              {previewUrl ? (
+                <div className="relative w-full max-w-md">
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-64 object-cover rounded-lg"
+                  />
+                  <button
+                    onClick={() => {
+                      setSelectedImage(null);
+                      setPreviewUrl(null);
+                      setResult(null);
+                    }}
+                    className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <label className="w-full max-w-md h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-lg cursor-pointer hover:border-cyan-500 transition-colors">
+                  <div className="flex flex-col items-center gap-2">
+                    <svg className="w-12 h-12 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-slate-400">Click to upload photo</span>
+                    <span className="text-xs text-slate-600">JPG, PNG, or GIF</span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                </label>
+              )}
+
+              <div className="w-full flex justify-between items-center">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-900/50 text-blue-300 border border-blue-800">
+                  ✨ Powered by Gemini 3 + Spotify
+                </span>
+
                 <button
-                  onClick={() => {
-                    setSelectedImage(null);
-                    setPreviewUrl(null);
-                    setResult(null);
-                  }}
-                  className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm"
+                  onClick={handleAnalyze}
+                  disabled={loading || !selectedImage || !userId}
+                  className={`px-8 py-3 rounded-xl font-bold text-lg transition-all ${loading || !selectedImage || !userId
+                    ? 'bg-slate-700 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:scale-105 shadow-lg shadow-cyan-500/20'
+                    }`}
                 >
-                  Remove
+                  {loading ? 'Analyzing...' : 'Find My Soundtrack'}
                 </button>
               </div>
-            ) : (
-              <label className="w-full max-w-md h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-lg cursor-pointer hover:border-cyan-500 transition-colors">
-                <div className="flex flex-col items-center gap-2">
-                  <svg className="w-12 h-12 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-slate-400">Click to upload photo</span>
-                  <span className="text-xs text-slate-600">JPG, PNG, or GIF</span>
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-              </label>
-            )}
-
-            <div className="w-full flex justify-between items-center">
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-900/50 text-blue-300 border border-blue-800">
-                ✨ Powered by Gemini 3 + Spotify
-              </span>
-
-              <button
-                onClick={handleAnalyze}
-                disabled={loading || !selectedImage || !userId}
-                className={`px-8 py-3 rounded-xl font-bold text-lg transition-all ${loading || !selectedImage || !userId
-                  ? 'bg-slate-700 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:scale-105 shadow-lg shadow-cyan-500/20'
-                  }`}
-              >
-                {loading ? 'Analyzing...' : 'Find My Soundtrack'}
-              </button>
             </div>
           </div>
-        </div>
         )}
 
         {activeTab === "playlists" && (
@@ -406,8 +407,8 @@ export default function Home() {
                           onClick={() => handleLike(rec.track)}
                           disabled={likedTracks.has(rec.track.id)}
                           className={`p-2 rounded-full border transition-all ${likedTracks.has(rec.track.id)
-                              ? 'bg-red-500/20 border-red-500 text-red-500'
-                              : 'border-slate-600 text-slate-400 hover:border-red-400 hover:text-red-400'
+                            ? 'bg-red-500/20 border-red-500 text-red-500'
+                            : 'border-slate-600 text-slate-400 hover:border-red-400 hover:text-red-400'
                             }`}
                           title="Like this track to improve future recommendations"
                         >
